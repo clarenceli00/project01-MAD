@@ -7,7 +7,7 @@ class HabitGardenTabs extends StatefulWidget {
   State<HabitGardenTabs> createState() => _HabitGardenTabsState();
 }
 class _HabitGardenTabsState extends State<HabitGardenTabs>{
-  var selected_tab = 0;
+  var _selectedIndex = 0;
   final List<Widget> _screens = const [HabitGardenScreen(), HistoryScreen(), SettingsScreen(),];
   final List<String> _titles = const ['Habit Garden', 'History', 'Settings',];
   @override
@@ -16,14 +16,15 @@ class _HabitGardenTabsState extends State<HabitGardenTabs>{
       appBar: AppBar(
         title: const Text('Habit Mastery League'),
       ),
-      body: const Center(
-        child: Text('No habits yet'),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: selected_tab,
+        selectedIndex: _selectedIndex,
         onDestinationSelected: (int index) {
           setState(() {
-            selected_tab = index;
+            _selectedIndex = index;
           });
         },
         destinations: [NavigationDestination(icon: Icon(Icons.local_florist), label: "Garden"),
