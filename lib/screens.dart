@@ -8,6 +8,7 @@ class HabitGardenTabs extends StatefulWidget {
 }
 class _HabitGardenTabsState extends State<HabitGardenTabs>{
   var selected_tab = 0;
+  final List<Widget> _screens = const [HabitGardenScreen(), HistoryScreen(), SettingsScreen(),];
   final List<String> _titles = const ['Habit Garden', 'History', 'Settings',];
   @override
   Widget build(BuildContext context) {
@@ -18,7 +19,17 @@ class _HabitGardenTabsState extends State<HabitGardenTabs>{
       body: const Center(
         child: Text('No habits yet'),
       ),
-      bottomNavigationBar: const Text('asdf'),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: selected_tab,
+        onDestinationSelected: (int index) {
+          setState(() {
+            selected_tab = index;
+          });
+        },
+        destinations: [NavigationDestination(icon: Icon(Icons.local_florist), label: "Garden"),
+        NavigationDestination(icon: Icon(Icons.history), label: "History"),
+        NavigationDestination(icon: Icon(Icons.settings), label: "Settings")],
+      ),
     );
   }
 }
