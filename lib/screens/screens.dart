@@ -40,25 +40,146 @@ class _HabitGardenTabsState extends State<HabitGardenTabs>{
   }
 }
 class HabitTile extends StatelessWidget {
-  const HabitTile({super.key});
+  final String title;
+  final String category;
+  final int completedDays;
+  final int weeklyTarget;
+  final VoidCallback onTap;
+
+  const HabitTile({
+    super.key,
+    required this.title,
+    required this.category,
+    required this.completedDays,
+    required this.weeklyTarget,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
-      child: Text('test'),
+    final percentage = (completedDays / weeklyTarget * 100).round();
+
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.local_florist),
+        title: Text(title),
+        subtitle: Text(
+          '$category\n'
+          '$completedDays / $weeklyTarget days · $percentage%',
+        ),
+        isThreeLine: true,
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
     );
   }
 }
 
 class CheckInForm extends StatefulWidget {
-  const CheckInForm({super.key});
+  final DateTime habitStartDate;
+
+  const CheckInForm({
+    super.key,
+    required this.habitStartDate,
+  });
 
   @override
   State<CheckInForm> createState() => _CheckInFormState();
 }
-class _CheckInFormState extends State<CheckInForm>{
+
+class _CheckInFormState extends State<CheckInForm> {
+  DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
+  final TextEditingController _noteController = TextEditingController();
+
+  String get _dateText {
+    final year = _selectedDate.year;
+    final month = _selectedDate.month.toString().padLeft(2, '0');
+    final day = _selectedDate.day.toString().padLeft(2, '0');
+
+    return '$year-$month-$day';
+  }
+
+  Future<void> _pickDate() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateUtils.dateOnly(widget.habitStartDate),
+      lastDate: DateUtils.dateOnly(DateTime.now()),
+    );
+
+    if (!mounted || pickedDate == null) return;
+
+    setState(() {
+      _selectedDate = pickedDate;
+    });
+  }
+
   @override
-  Widget build(BuildContext context){
-    return const Center(child: Text('test form'),);
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Add Check-in'),
+
+            const SizedBox(height: 16),
+
+            OutlinedButton.icon(
+              onPressed: _pickDate,
+              icon: const Icon(Icons.calendar_today),
+              label: Text(_dateText),
+            ),
+
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: _noteController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Note (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context, <String, String>{
+                      'localDate': _dateText,
+                      'note': _noteController.text.trim(),
+                    });
+                  },
+                  child: const Text('Continue'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
