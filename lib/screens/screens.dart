@@ -65,7 +65,7 @@ class HabitTile extends StatelessWidget {
         title: Text(title),
         subtitle: Text(
           '$category\n'
-          '$completedDays / $weeklyTarget days · $percentage%',
+          '$completedDays / $weeklyTarget Days Completed | Progress: $percentage%',
         ),
         isThreeLine: true,
         trailing: const Icon(Icons.chevron_right),

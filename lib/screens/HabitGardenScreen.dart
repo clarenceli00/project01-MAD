@@ -36,6 +36,10 @@ class _HabitGardenScreenState extends State<HabitGardenScreen> {
                     MaterialPageRoute(
                       builder: (context) => HabitDetailScreen(
                         habitName: name,
+                        category: 'Learning',
+                        weeklyTarget: 4,
+                        startDate: DateTime(2026, 10, 29),
+                        motivation: 'Read more regularly',
                       ),
                     ),
                   );
