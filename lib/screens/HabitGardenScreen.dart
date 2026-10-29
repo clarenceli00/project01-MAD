@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project01/screens/HabitDetailScreen.dart';
 import 'package:project01/screens/screens.dart';
 
 class HabitGardenScreen extends StatefulWidget {
@@ -9,6 +10,9 @@ class HabitGardenScreen extends StatefulWidget {
 }
 
 class _HabitGardenScreenState extends State<HabitGardenScreen> {
+  final List<String> _habitNames = ['Reading', 'Sketching',];
+
+
   @override
   Widget build(BuildContext context) {
     return Padding(padding: EdgeInsetsGeometry.all(16),
@@ -16,17 +20,29 @@ class _HabitGardenScreenState extends State<HabitGardenScreen> {
         children: [
         Text("Current Week"),
         Expanded(
-          child: ListView(
-            children: [
-              HabitTile(
-                title: 'gooning',
-                category: 'gooning',
-                completedDays: 2,
+          child: ListView.builder(
+            itemCount: _habitNames.length,
+            itemBuilder: (context, index) {
+              final name = _habitNames[index];
+
+              return HabitTile(
+                title: name,
+                category: 'Learning',
+                completedDays: 0,
                 weeklyTarget: 4,
-                onTap: (){}
-                ,)
-            ],
-          )
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HabitDetailScreen(
+                        habitName: name,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         ),
         FilledButton.icon(label: Text('Add Habit'), onPressed: (){},),
         ]

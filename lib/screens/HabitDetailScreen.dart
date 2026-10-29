@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 
 class HabitDetailScreen extends StatefulWidget {
-  const HabitDetailScreen({super.key});
+  final String habitName;
+
+  const HabitDetailScreen({
+    super.key,
+    required this.habitName,
+  });
+
   @override
-  State<HabitDetailScreen> createState() => _HabitDetailScreenState();
+  State<HabitDetailScreen> createState() =>
+      _HabitDetailScreenState();
 }
 class _HabitDetailScreenState extends State<HabitDetailScreen>{
+  
   @override
   Widget build(BuildContext context){
-    return const Center(child: Text('no details yet'),);
+    return Scaffold(body:Center(child:Text(widget.habitName)));
   }
 }
