@@ -1,4 +1,16 @@
-//Habit and check in models will live here
+class Habit {
+  final String title;
+  final String category;
+  final int weeklyTarget;
+  final DateTime startDate;
+  final String motivation;
 
-// Habit must include: id, title, category, weeklyTarget, startedLocalDate, motivation, cycleWeekStart, cycleStatus
-//Checkin model must include: id, habitId, localDate, note
+  const Habit({
+    required this.title,
+    required this.category,
+    required this.weeklyTarget,
+    required this.startDate,
+    required this.motivation,
+  });
+}
+// ADD DATABASE MODELS FOR HABITS AND CHECKIN FORM

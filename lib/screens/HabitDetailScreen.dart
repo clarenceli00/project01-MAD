@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models.dart';
+import 'HabitEditorScreen.dart';
 
 class HabitDetailScreen extends StatefulWidget {
   final String habitName;
@@ -7,6 +9,7 @@ class HabitDetailScreen extends StatefulWidget {
   final DateTime startDate;
   final String motivation;
   final int completedDays;
+  final ValueChanged<Habit>? onHabitChanged;
 
   const HabitDetailScreen({
     super.key,
@@ -16,6 +19,7 @@ class HabitDetailScreen extends StatefulWidget {
     required this.startDate,
     required this.motivation,
     this.completedDays = 0,
+    this.onHabitChanged,
   }) : assert(weeklyTarget >= 1 && weeklyTarget <= 7),
        assert(completedDays >= 0 && completedDays <= 7);
 
@@ -25,22 +29,45 @@ class HabitDetailScreen extends StatefulWidget {
 
 class _HabitDetailScreenState extends State<HabitDetailScreen> {
   String cycleStatus = 'Ready';
+  late Habit _habit;
+
+  @override
+  void initState() {
+    super.initState();
+    _habit = Habit(
+      title: widget.habitName,
+      category: widget.category,
+      weeklyTarget: widget.weeklyTarget,
+      startDate: widget.startDate,
+      motivation: widget.motivation,
+    );
+  }
+
+  Future<void> _editHabit() async {
+    final updatedHabit = await Navigator.push<Habit>(
+      context,
+      MaterialPageRoute(builder: (context) => HabitEditorScreen(habit: _habit)),
+    );
+    if (!mounted || updatedHabit == null) return;
+
+    setState(() => _habit = updatedHabit);
+    // Update the matching card in Garden as well.
+    widget.onHabitChanged?.call(updatedHabit);
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Example: 2 completed days / target of 4 = 0.5 (50%).
-    final progress = widget.completedDays / widget.weeklyTarget;
+    final progress = widget.completedDays / _habit.weeklyTarget;
     final percentage = (progress * 100).round();
     final startDate = MaterialLocalizations.of(context)
-        .formatMediumDate(widget.startDate);
+        .formatMediumDate(_habit.startDate);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.habitName),
+        title: Text(_habit.title),
         actions: [
           TextButton(
-            // TODO: open editor
-            onPressed: null,
+            onPressed: _editHabit,
             child: const Text('Edit'),
           ),
         ],
@@ -55,7 +82,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
               const SizedBox(height: 16),
 
               Text(
-                '${widget.completedDays} of ${widget.weeklyTarget} days this week',
+                '${widget.completedDays} of ${_habit.weeklyTarget} days this week',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
@@ -112,10 +139,10 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
               Text('About this habit',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
-              Text('Category: ${widget.category}'),
+              Text('Category: ${_habit.category}'),
               Text('Started: $startDate'),
-              if (widget.motivation.trim().isNotEmpty)
-                Text(widget.motivation),
+              if (_habit.motivation.trim().isNotEmpty)
+                Text(_habit.motivation),
               const SizedBox(height: 16),
 
               TextButton(
