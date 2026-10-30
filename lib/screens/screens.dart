@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:project01/screens/HabitGardenScreen.dart';
 import 'package:project01/screens/HistoryScreen.dart';
 import 'package:project01/screens/SettingsScreen.dart';
-import 'package:project01/screens/HabitDetailScreen.dart';
-import 'package:project01/screens/HabitEditorScreen.dart';
+import '../models.dart';
 
 class HabitGardenTabs extends StatefulWidget {
   const HabitGardenTabs({super.key});
@@ -13,8 +12,16 @@ class HabitGardenTabs extends StatefulWidget {
 }
 class _HabitGardenTabsState extends State<HabitGardenTabs>{
   var _selectedIndex = 0;
-  final List<Widget> _screens = const [HabitGardenScreen(), HistoryScreen(), SettingsScreen(),];
-  final List<String> _titles = const ['Habit Garden', 'History', 'Settings',];
+  // Shared in-memory records for Garden, Details, and History.
+  final List<Habit> _habits = [
+    Habit(title: 'Reading', category: 'Learning', weeklyTarget: 4,
+        startDate: DateUtils.dateOnly(DateTime.now()), motivation: 'Read more regularly'),
+    Habit(title: 'Sketching', category: 'Creative', weeklyTarget: 3,
+        startDate: DateUtils.dateOnly(DateTime.now()), motivation: ''),
+  ];
+  final List<CheckIn> _checkIns = [];
+
+  void _refresh() => setState(() {});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,7 +30,11 @@ class _HabitGardenTabsState extends State<HabitGardenTabs>{
       ),
       body: IndexedStack(
         index: _selectedIndex,
-        children: _screens,
+        children: [
+          HabitGardenScreen(habits: _habits, checkIns: _checkIns, onChanged: _refresh),
+          HistoryScreen(habits: _habits, checkIns: _checkIns, onChanged: _refresh),
+          const SettingsScreen(),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
@@ -77,10 +88,14 @@ class HabitTile extends StatelessWidget {
 
 class CheckInForm extends StatefulWidget {
   final DateTime habitStartDate;
+  final CheckIn? entry;
+  final List<DateTime> usedDates;
 
   const CheckInForm({
     super.key,
     required this.habitStartDate,
+    this.entry,
+    this.usedDates = const [],
   });
 
   @override
@@ -90,6 +105,16 @@ class CheckInForm extends StatefulWidget {
 class _CheckInFormState extends State<CheckInForm> {
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   final TextEditingController _noteController = TextEditingController();
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.entry != null) {
+      _selectedDate = widget.entry!.date;
+      _noteController.text = widget.entry!.note;
+    }
+  }
 
   String get _dateText {
     final year = _selectedDate.year;
@@ -134,7 +159,7 @@ class _CheckInFormState extends State<CheckInForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Add Check-in'),
+            Text(widget.entry == null ? 'Add Check-in' : 'Edit Check-in'),
 
             const SizedBox(height: 16),
 
@@ -157,6 +182,8 @@ class _CheckInFormState extends State<CheckInForm> {
 
             const SizedBox(height: 16),
 
+            if (_error != null) Text(_error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -168,12 +195,22 @@ class _CheckInFormState extends State<CheckInForm> {
                 ),
                 FilledButton(
                   onPressed: () {
+                    final today = DateUtils.dateOnly(DateTime.now());
+                    if (_selectedDate.isAfter(today) ||
+                        _selectedDate.isBefore(DateUtils.dateOnly(widget.habitStartDate))) {
+                      setState(() => _error = 'Choose a date between the habit start and today.');
+                      return;
+                    }
+                    if (widget.usedDates.any((date) => DateUtils.isSameDay(date, _selectedDate))) {
+                      setState(() => _error = 'A check-in already exists for this date.');
+                      return;
+                    }
                     Navigator.pop(context, <String, String>{
                       'localDate': _dateText,
                       'note': _noteController.text.trim(),
                     });
                   },
-                  child: const Text('Continue'),
+                  child: const Text('Save Check-in'),
                 ),
               ],
             ),
@@ -182,4 +219,30 @@ class _CheckInFormState extends State<CheckInForm> {
       ),
     );
   }
+}
+
+// Both Details and History use the same form and save to the shared list.
+Future<void> openCheckInForm(BuildContext context, Habit habit,
+    List<CheckIn> checkIns, VoidCallback onChanged, {CheckIn? entry}) async {
+  if (habit.startDate.isAfter(DateUtils.dateOnly(DateTime.now()))) return;
+  final result = await showModalBottomSheet<Map<String, String>>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (context) => CheckInForm(
+      habitStartDate: habit.startDate,
+      entry: entry,
+      usedDates: checkIns.where((item) => item.habitId == habit.id && item != entry)
+          .map((item) => item.date).toList(),
+    ),
+  );
+  if (result == null || !context.mounted) return;
+  final updated = CheckIn(habitId: habit.id,
+      date: DateTime.parse(result['localDate']!), note: result['note']!);
+  if (entry == null) {
+    checkIns.add(updated);
+  } else {
+    checkIns[checkIns.indexOf(entry)] = updated;
+  }
+  onChanged();
 }

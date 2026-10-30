@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
 import 'HabitEditorScreen.dart';
+import 'HistoryScreen.dart';
+import 'screens.dart' show openCheckInForm;
 
 class HabitDetailScreen extends StatefulWidget {
   final String habitName;
@@ -10,6 +12,9 @@ class HabitDetailScreen extends StatefulWidget {
   final String motivation;
   final int completedDays;
   final ValueChanged<Habit>? onHabitChanged;
+  final int? habitId;
+  final List<CheckIn>? checkIns;
+  final VoidCallback? onCheckInsChanged;
 
   const HabitDetailScreen({
     super.key,
@@ -20,6 +25,9 @@ class HabitDetailScreen extends StatefulWidget {
     required this.motivation,
     this.completedDays = 0,
     this.onHabitChanged,
+    this.habitId,
+    this.checkIns,
+    this.onCheckInsChanged,
   }) : assert(weeklyTarget >= 1 && weeklyTarget <= 7),
        assert(completedDays >= 0 && completedDays <= 7);
 
@@ -35,6 +43,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
   void initState() {
     super.initState();
     _habit = Habit(
+      id: widget.habitId,
       title: widget.habitName,
       category: widget.category,
       weeklyTarget: widget.weeklyTarget,
@@ -44,9 +53,13 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
   }
 
   Future<void> _editHabit() async {
+    final dates = (widget.checkIns ?? <CheckIn>[])
+        .where((entry) => entry.habitId == _habit.id)
+        .map((entry) => entry.date).toList()..sort();
     final updatedHabit = await Navigator.push<Habit>(
       context,
-      MaterialPageRoute(builder: (context) => HabitEditorScreen(habit: _habit)),
+      MaterialPageRoute(builder: (context) => HabitEditorScreen(
+        habit: _habit, earliestCheckIn: dates.isEmpty ? null : dates.first)),
     );
     if (!mounted || updatedHabit == null) return;
 
@@ -55,9 +68,28 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
     widget.onHabitChanged?.call(updatedHabit);
   }
 
+  void _refreshCheckIns() {
+    widget.onCheckInsChanged?.call();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _viewHistory() async {
+    if (widget.checkIns == null) return;
+    await Navigator.push<void>(context, MaterialPageRoute(
+      builder: (context) => Scaffold(
+        appBar: AppBar(title: Text('${_habit.title} history')),
+        body: HistoryScreen(habits: [_habit], checkIns: widget.checkIns!,
+          initialHabitId: _habit.id, onChanged: _refreshCheckIns),
+      ),
+    ));
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    final progress = widget.completedDays / _habit.weeklyTarget;
+    final completedDays = widget.checkIns == null ? widget.completedDays
+        : weeklyCount(widget.checkIns!, _habit.id, DateTime.now());
+    final progress = completedDays / _habit.weeklyTarget;
     final percentage = (progress * 100).round();
     final startDate = MaterialLocalizations.of(context)
         .formatMediumDate(_habit.startDate);
@@ -82,7 +114,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
               const SizedBox(height: 16),
 
               Text(
-                '${widget.completedDays} of ${_habit.weeklyTarget} days this week',
+                '$completedDays of ${_habit.weeklyTarget} days this week',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
@@ -94,8 +126,9 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
               const SizedBox(height: 24),
 
               FilledButton.icon(
-                // TODO: open the checkin form and save to database
-                onPressed: null,
+                onPressed: widget.checkIns != null && cycleStatus == 'Active'
+                    ? () => openCheckInForm(context, _habit, widget.checkIns!, _refreshCheckIns)
+                    : null,
                 icon: const Icon(Icons.check),
                 label: const Text('Check In'),
               ),
@@ -146,8 +179,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
               const SizedBox(height: 16),
 
               TextButton(
-                // TODO: get history from database
-                onPressed: null,
+                onPressed: widget.checkIns != null ? _viewHistory : null,
                 child: const Text('View Check-in History'),
               ),
               const SizedBox(height: 24),

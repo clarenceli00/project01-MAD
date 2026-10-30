@@ -4,8 +4,9 @@ import '../models.dart';
 class HabitEditorScreen extends StatefulWidget {
   // Null creates a new habit, not null edits existing habit
   final Habit? habit;
+  final DateTime? earliestCheckIn;
 
-  const HabitEditorScreen({super.key, this.habit});
+  const HabitEditorScreen({super.key, this.habit, this.earliestCheckIn});
   @override
   State<HabitEditorScreen> createState() => _HabitEditorScreenState();
 }
@@ -16,6 +17,7 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
   String _category = 'Learning';
   double _weeklyTarget = 4;
   DateTime _startDate = DateUtils.dateOnly(DateTime.now());
+  String? _dateError;
 
   @override
   void initState() {
@@ -51,8 +53,14 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
+    if (widget.earliestCheckIn != null &&
+        _startDate.isAfter(widget.earliestCheckIn!)) {
+      setState(() => _dateError = 'Correct or delete earlier check-ins before changing the start date.');
+      return;
+    }
 
     final habit = Habit(
+      id: widget.habit?.id,
       title: _titleController.text.trim(),
       category: _category,
       weeklyTarget: _weeklyTarget.round(),
@@ -102,6 +110,8 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
                 icon: const Icon(Icons.calendar_today),
                 label: Text('Start date: ${MaterialLocalizations.of(context).formatMediumDate(_startDate)}'),
               ),
+              if (_dateError != null) Text(_dateError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
               const SizedBox(height: 16),
               Text('Weekly target: ${_weeklyTarget.round()} ${_weeklyTarget == 1 ? 'day' : 'days'}'),
               Slider(value: _weeklyTarget,min: 1,max: 7,divisions: 6,

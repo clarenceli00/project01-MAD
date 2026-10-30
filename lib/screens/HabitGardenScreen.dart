@@ -5,38 +5,24 @@ import 'HabitEditorScreen.dart';
 import 'screens.dart' show HabitTile;
 
 class HabitGardenScreen extends StatefulWidget {
-  const HabitGardenScreen({super.key});
+  final List<Habit> habits;
+  final List<CheckIn> checkIns;
+  final VoidCallback onChanged;
+
+  const HabitGardenScreen({super.key, required this.habits,
+    required this.checkIns, required this.onChanged});
 
   @override
   State<HabitGardenScreen> createState() => _HabitGardenScreenState();
 }
 
 class _HabitGardenScreenState extends State<HabitGardenScreen> {
-  // These habits live in memory until SQLite is connected.
-  final List<Habit> _habits = [
-    Habit(
-      title: 'Reading',
-      category: 'Learning',
-      weeklyTarget: 4,
-      startDate: DateUtils.dateOnly(DateTime.now()),
-      motivation: 'Read more regularly',
-    ),
-    Habit(
-      title: 'Sketching',
-      category: 'Creative',
-      weeklyTarget: 3,
-      startDate: DateUtils.dateOnly(DateTime.now()),
-      motivation: '',
-    ),
-  ];
-
   Future<void> _addHabit() async {
-    final habit = await Navigator.push<Habit>(
-      context,
-      MaterialPageRoute(builder: (context) => const HabitEditorScreen()),
-    );
+    final habit = await Navigator.push<Habit>(context,
+      MaterialPageRoute(builder: (context) => const HabitEditorScreen()));
     if (!mounted || habit == null) return;
-    setState(() => _habits.add(habit));
+    widget.habits.add(habit);
+    widget.onChanged();
   }
 
   @override
@@ -48,41 +34,39 @@ class _HabitGardenScreenState extends State<HabitGardenScreen> {
           const Text('Current Week'),
           Expanded(
             child: ListView.builder(
-              itemCount: _habits.length,
+              itemCount: widget.habits.length,
               itemBuilder: (context, index) {
-                final habit = _habits[index];
+                final habit = widget.habits[index];
                 return HabitTile(
                   title: habit.title,
                   category: habit.category,
-                  completedDays: 0,
+                  completedDays: weeklyCount(widget.checkIns, habit.id, DateTime.now()),
                   weeklyTarget: habit.weeklyTarget,
                   onTap: () {
-                    Navigator.push<void>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => HabitDetailScreen(
-                          habitName: habit.title,
-                          category: habit.category,
-                          weeklyTarget: habit.weeklyTarget,
-                          startDate: habit.startDate,
-                          motivation: habit.motivation,
-                          onHabitChanged: (updatedHabit) {
-                            if (!mounted) return;
-                            setState(() => _habits[index] = updatedHabit);
-                          },
-                        ),
+                    Navigator.push<void>(context, MaterialPageRoute(
+                      builder: (context) => HabitDetailScreen(
+                        habitName: habit.title,
+                        category: habit.category,
+                        weeklyTarget: habit.weeklyTarget,
+                        startDate: habit.startDate,
+                        motivation: habit.motivation,
+                        habitId: habit.id,
+                        checkIns: widget.checkIns,
+                        onCheckInsChanged: widget.onChanged,
+                        onHabitChanged: (updatedHabit) {
+                          if (!mounted) return;
+                          widget.habits[index] = updatedHabit;
+                          widget.onChanged();
+                        },
                       ),
-                    );
+                    ));
                   },
                 );
               },
             ),
           ),
-          FilledButton.icon(
-            onPressed: _addHabit,
-            icon: const Icon(Icons.add),
-            label: const Text('Add Habit'),
-          ),
+          FilledButton.icon(onPressed: _addHabit, icon: const Icon(Icons.add),
+            label: const Text('Add Habit')),
         ],
       ),
     );
