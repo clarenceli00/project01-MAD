@@ -92,7 +92,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             )
             .toList()
           ..sort((a, b) => b.date.compareTo(a.date));
-    final count = weeklyCount(widget.checkIns, habit.id, _week);
+    final count = weeklyCount(widget.checkIns, habit.id!, _week);
     final dates = MaterialLocalizations.of(context);
 
     return Padding(
