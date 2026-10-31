@@ -53,6 +53,32 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
     });
   }
 
+  Future<void> _changeCycle(String action) async {
+    if (_habit.id == null) return;
+
+    try {
+      if (action == 'start') {
+        await databaseHelper.startWeek(_habit.id!);
+      }
+
+      if (action == 'finish') {
+        await databaseHelper.finishWeek(_habit.id!);
+      }
+
+      if (action == 'reset') {
+        await databaseHelper.resetWeek(_habit.id!);
+      }
+
+      await _loadCycleStatus();
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not update week: $error')));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -172,31 +198,19 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
                 children: [
                   OutlinedButton(
                     onPressed: cycleStatus == 'Ready'
-                        ? () {
-                            setState(() {
-                              cycleStatus = 'Active';
-                            });
-                          }
+                        ? () => _changeCycle('start')
                         : null,
                     child: const Text('Start Week'),
                   ),
                   OutlinedButton(
                     onPressed: cycleStatus == 'Active'
-                        ? () {
-                            setState(() {
-                              cycleStatus = 'Finished';
-                            });
-                          }
+                        ? () => _changeCycle('finish')
                         : null,
                     child: const Text('Finish Week'),
                   ),
                   TextButton(
                     onPressed: cycleStatus != 'Ready'
-                        ? () {
-                            setState(() {
-                              cycleStatus = 'Ready';
-                            });
-                          }
+                        ? () => _changeCycle('reset')
                         : null,
                     child: const Text('Reset Flow'),
                   ),
