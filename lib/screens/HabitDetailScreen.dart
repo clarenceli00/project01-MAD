@@ -204,7 +204,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
   Widget build(BuildContext context) {
     final completedDays = widget.checkIns == null
         ? widget.completedDays
-        : weeklyCount(widget.checkIns!, _habit.id, DateTime.now());
+        : weeklyCount(widget.checkIns!, _habit.id!, DateTime.now());
     final progress = completedDays / _habit.weeklyTarget;
     final percentage = (progress * 100).round();
     final startDate = MaterialLocalizations.of(context)
