@@ -111,9 +111,23 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
     );
     if (!mounted || updatedHabit == null) return;
 
-    setState(() => _habit = updatedHabit);
-    // Update the matching card in Garden as well.
-    widget.onHabitChanged?.call(updatedHabit);
+    try {
+      await databaseHelper.updateHabit(updatedHabit);
+
+      if (!mounted) return;
+
+      setState(() {
+        _habit = updatedHabit;
+      });
+
+      widget.onHabitChanged?.call(updatedHabit);
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not edit habit: $error')));
+    }
   }
 
   void _refreshCheckIns() {
