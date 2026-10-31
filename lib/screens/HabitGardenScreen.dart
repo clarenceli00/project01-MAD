@@ -81,8 +81,6 @@ class _HabitGardenScreenState extends State<HabitGardenScreen> {
                           checkIns: widget.checkIns,
                           onCheckInsChanged: widget.onChanged,
                           onHabitChanged: (updatedHabit) {
-                            if (!mounted) return;
-                            widget.habits[index] = updatedHabit;
                             widget.onChanged();
                           },
                         ),
