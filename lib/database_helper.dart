@@ -80,4 +80,26 @@ class DatabaseHelper {
       ON check_ins(habit_id, local_date)
     ''');
   }
+
+  // Check whether habit information is valid
+  void validateHabit(Habit habit) {
+    if (habit.title.trim().isEmpty) {
+      throw ArgumentError('Please enter a habit title.');
+    }
+
+    if (habit.category.trim().isEmpty) {
+      throw ArgumentError('Please select a category.');
+    }
+
+    if (habit.weeklyTarget < 1 || habit.weeklyTarget > 7) {
+      throw ArgumentError('Target must be between 1 and 7.');
+    }
+
+    String start = dateToString(habit.startDate);
+    String today = dateToString(DateTime.now());
+
+    if (start.compareTo(today) > 0) {
+      throw ArgumentError('Start date cannot be in the future.');
+    }
+  }
 }
