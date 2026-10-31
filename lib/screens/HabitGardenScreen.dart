@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+
 import '../models.dart';
 import 'HabitDetailScreen.dart';
 import 'HabitEditorScreen.dart';
 import 'screens.dart' show HabitTile;
+import '../database_helper.dart';
 
 class HabitGardenScreen extends StatefulWidget {
   final List<Habit> habits;
   final List<CheckIn> checkIns;
   final VoidCallback onChanged;
 
-  const HabitGardenScreen({super.key, required this.habits,
-    required this.checkIns, required this.onChanged});
+  const HabitGardenScreen({
+    super.key,
+    required this.habits,
+    required this.checkIns,
+    required this.onChanged,
+  });
 
   @override
   State<HabitGardenScreen> createState() => _HabitGardenScreenState();
@@ -18,8 +24,10 @@ class HabitGardenScreen extends StatefulWidget {
 
 class _HabitGardenScreenState extends State<HabitGardenScreen> {
   Future<void> _addHabit() async {
-    final habit = await Navigator.push<Habit>(context,
-      MaterialPageRoute(builder: (context) => const HabitEditorScreen()));
+    final habit = await Navigator.push<Habit>(
+      context,
+      MaterialPageRoute(builder: (context) => const HabitEditorScreen()),
+    );
     if (!mounted || habit == null) return;
     widget.habits.add(habit);
     widget.onChanged();
@@ -40,33 +48,43 @@ class _HabitGardenScreenState extends State<HabitGardenScreen> {
                 return HabitTile(
                   title: habit.title,
                   category: habit.category,
-                  completedDays: weeklyCount(widget.checkIns, habit.id, DateTime.now()),
+                  completedDays: weeklyCount(
+                    widget.checkIns,
+                    habit.id,
+                    DateTime.now(),
+                  ),
                   weeklyTarget: habit.weeklyTarget,
                   onTap: () {
-                    Navigator.push<void>(context, MaterialPageRoute(
-                      builder: (context) => HabitDetailScreen(
-                        habitName: habit.title,
-                        category: habit.category,
-                        weeklyTarget: habit.weeklyTarget,
-                        startDate: habit.startDate,
-                        motivation: habit.motivation,
-                        habitId: habit.id,
-                        checkIns: widget.checkIns,
-                        onCheckInsChanged: widget.onChanged,
-                        onHabitChanged: (updatedHabit) {
-                          if (!mounted) return;
-                          widget.habits[index] = updatedHabit;
-                          widget.onChanged();
-                        },
+                    Navigator.push<void>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => HabitDetailScreen(
+                          habitName: habit.title,
+                          category: habit.category,
+                          weeklyTarget: habit.weeklyTarget,
+                          startDate: habit.startDate,
+                          motivation: habit.motivation,
+                          habitId: habit.id,
+                          checkIns: widget.checkIns,
+                          onCheckInsChanged: widget.onChanged,
+                          onHabitChanged: (updatedHabit) {
+                            if (!mounted) return;
+                            widget.habits[index] = updatedHabit;
+                            widget.onChanged();
+                          },
+                        ),
                       ),
-                    ));
+                    );
                   },
                 );
               },
             ),
           ),
-          FilledButton.icon(onPressed: _addHabit, icon: const Icon(Icons.add),
-            label: const Text('Add Habit')),
+          FilledButton.icon(
+            onPressed: _addHabit,
+            icon: const Icon(Icons.add),
+            label: const Text('Add Habit'),
+          ),
         ],
       ),
     );
