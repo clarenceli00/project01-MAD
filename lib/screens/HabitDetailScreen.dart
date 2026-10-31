@@ -154,6 +154,52 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _deleteHabit() async {
+    if (_habit.id == null) return;
+
+    int count = await databaseHelper.countCheckIns(_habit.id!);
+
+    if (!mounted) return;
+
+    bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Habit?'),
+        content: Text(
+          'This will delete the habit and '
+          '$count saved check-in records.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await databaseHelper.deleteHabit(_habit.id!);
+
+      widget.onCheckInsChanged?.call();
+
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete habit: $error')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final completedDays = widget.checkIns == null
@@ -249,8 +295,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
               ),
               const SizedBox(height: 24),
               TextButton(
-                // TODO: connect with the database; confirm deletion
-                onPressed: null,
+                onPressed: _deleteHabit,
                 child: const Text('Delete Habit'),
               ),
             ],
