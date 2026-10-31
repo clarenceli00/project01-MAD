@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models.dart';
 import 'screens.dart' show openCheckInForm;
 import '../database_helper.dart';
+import '../garden_guide.dart';
 
 class HistoryScreen extends StatefulWidget {
   final List<Habit> habits;
