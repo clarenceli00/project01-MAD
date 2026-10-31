@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../models.dart';
 import 'HabitEditorScreen.dart';
 import 'HistoryScreen.dart';
 import 'screens.dart' show openCheckInForm;
+import '../database_helper.dart';
 
 class HabitDetailScreen extends StatefulWidget {
   final String habitName;
@@ -53,13 +55,20 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
   }
 
   Future<void> _editHabit() async {
-    final dates = (widget.checkIns ?? <CheckIn>[])
-        .where((entry) => entry.habitId == _habit.id)
-        .map((entry) => entry.date).toList()..sort();
+    final dates =
+        (widget.checkIns ?? <CheckIn>[])
+            .where((entry) => entry.habitId == _habit.id)
+            .map((entry) => entry.date)
+            .toList()
+          ..sort();
     final updatedHabit = await Navigator.push<Habit>(
       context,
-      MaterialPageRoute(builder: (context) => HabitEditorScreen(
-        habit: _habit, earliestCheckIn: dates.isEmpty ? null : dates.first)),
+      MaterialPageRoute(
+        builder: (context) => HabitEditorScreen(
+          habit: _habit,
+          earliestCheckIn: dates.isEmpty ? null : dates.first,
+        ),
+      ),
     );
     if (!mounted || updatedHabit == null) return;
 
@@ -75,19 +84,27 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
 
   Future<void> _viewHistory() async {
     if (widget.checkIns == null) return;
-    await Navigator.push<void>(context, MaterialPageRoute(
-      builder: (context) => Scaffold(
-        appBar: AppBar(title: Text('${_habit.title} history')),
-        body: HistoryScreen(habits: [_habit], checkIns: widget.checkIns!,
-          initialHabitId: _habit.id, onChanged: _refreshCheckIns),
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text('${_habit.title} history')),
+          body: HistoryScreen(
+            habits: [_habit],
+            checkIns: widget.checkIns!,
+            initialHabitId: _habit.id,
+            onChanged: _refreshCheckIns,
+          ),
+        ),
       ),
-    ));
+    );
     if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final completedDays = widget.checkIns == null ? widget.completedDays
+    final completedDays = widget.checkIns == null
+        ? widget.completedDays
         : weeklyCount(widget.checkIns!, _habit.id, DateTime.now());
     final progress = completedDays / _habit.weeklyTarget;
     final percentage = (progress * 100).round();
@@ -97,12 +114,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_habit.title),
-        actions: [
-          TextButton(
-            onPressed: _editHabit,
-            child: const Text('Edit'),
-          ),
-        ],
+        actions: [TextButton(onPressed: _editHabit, child: const Text('Edit'))],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -127,7 +139,12 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
 
               FilledButton.icon(
                 onPressed: widget.checkIns != null && cycleStatus == 'Active'
-                    ? () => openCheckInForm(context, _habit, widget.checkIns!, _refreshCheckIns)
+                    ? () => openCheckInForm(
+                        context,
+                        _habit,
+                        widget.checkIns!,
+                        _refreshCheckIns,
+                      )
                     : null,
                 icon: const Icon(Icons.check),
                 label: const Text('Check In'),
@@ -141,27 +158,33 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
                 runSpacing: 8,
                 children: [
                   OutlinedButton(
-                    onPressed: cycleStatus == 'Ready' ? () {
-                      setState(() {
-                        cycleStatus = 'Active';
-                      });
-                    } : null,
+                    onPressed: cycleStatus == 'Ready'
+                        ? () {
+                            setState(() {
+                              cycleStatus = 'Active';
+                            });
+                          }
+                        : null,
                     child: const Text('Start Week'),
                   ),
                   OutlinedButton(
-                    onPressed: cycleStatus == 'Active' ? () {
-                      setState(() {
-                        cycleStatus = 'Finished';
-                      });
-                    } : null,
+                    onPressed: cycleStatus == 'Active'
+                        ? () {
+                            setState(() {
+                              cycleStatus = 'Finished';
+                            });
+                          }
+                        : null,
                     child: const Text('Finish Week'),
                   ),
                   TextButton(
-                    onPressed: cycleStatus != 'Ready' ? () {
-                      setState(() {
-                        cycleStatus = 'Ready';
-                      });
-                    } : null,
+                    onPressed: cycleStatus != 'Ready'
+                        ? () {
+                            setState(() {
+                              cycleStatus = 'Ready';
+                            });
+                          }
+                        : null,
                     child: const Text('Reset Flow'),
                   ),
                 ],
@@ -169,13 +192,14 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
               const Text('Reset changes the cycle status only, not check-ins.'),
               const SizedBox(height: 24),
 
-              Text('About this habit',
-                  style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'About this habit',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               Text('Category: ${_habit.category}'),
               Text('Started: $startDate'),
-              if (_habit.motivation.trim().isNotEmpty)
-                Text(_habit.motivation),
+              if (_habit.motivation.trim().isNotEmpty) Text(_habit.motivation),
               const SizedBox(height: 16),
 
               TextButton(
