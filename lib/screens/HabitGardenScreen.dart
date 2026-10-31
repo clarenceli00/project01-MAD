@@ -28,9 +28,22 @@ class _HabitGardenScreenState extends State<HabitGardenScreen> {
       context,
       MaterialPageRoute(builder: (context) => const HabitEditorScreen()),
     );
+
     if (!mounted || habit == null) return;
-    widget.habits.add(habit);
-    widget.onChanged();
+
+    try {
+      // Save to SQLite
+      await databaseHelper.insertHabit(habit);
+
+      // Reload saved habits
+      widget.onChanged();
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save habit: $error')));
+    }
   }
 
   @override
