@@ -22,7 +22,11 @@ class CheckIn {
   final DateTime date;
   final String note;
 
-  const CheckIn({required this.habitId, required this.date, required this.note});
+  const CheckIn({
+    required this.habitId,
+    required this.date,
+    required this.note,
+  });
 }
 
 DateTime weekStart(DateTime date) {
@@ -32,9 +36,17 @@ DateTime weekStart(DateTime date) {
 int weeklyCount(List<CheckIn> entries, int habitId, DateTime week) {
   final start = weekStart(week);
   final end = DateTime(start.year, start.month, start.day + 7);
-  return entries.where((entry) => entry.habitId == habitId &&
-      !entry.date.isBefore(start) && entry.date.isBefore(end))
-      .map((entry) => DateTime(entry.date.year, entry.date.month, entry.date.day))
-      .toSet().length;
+  return entries
+      .where(
+        (entry) =>
+            entry.habitId == habitId &&
+            !entry.date.isBefore(start) &&
+            entry.date.isBefore(end),
+      )
+      .map(
+        (entry) => DateTime(entry.date.year, entry.date.month, entry.date.day),
+      )
+      .toSet()
+      .length;
 }
 // ADD DATABASE MODELS FOR HABITS AND CHECKIN FORM
