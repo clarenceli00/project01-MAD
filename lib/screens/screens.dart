@@ -16,25 +16,33 @@ class HabitGardenTabs extends StatefulWidget {
 class _HabitGardenTabsState extends State<HabitGardenTabs> {
   var _selectedIndex = 0;
   // Shared in-memory records for Garden, Details, and History.
-  final List<Habit> _habits = [
-    Habit(
-      title: 'Reading',
-      category: 'Learning',
-      weeklyTarget: 4,
-      startDate: DateUtils.dateOnly(DateTime.now()),
-      motivation: 'Read more regularly',
-    ),
-    Habit(
-      title: 'Sketching',
-      category: 'Creative',
-      weeklyTarget: 3,
-      startDate: DateUtils.dateOnly(DateTime.now()),
-      motivation: '',
-    ),
-  ];
-  final List<CheckIn> _checkIns = [];
+  List<Habit> _habits = [];
+  List<CheckIn> _checkIns = [];
 
-  void _refresh() => setState(() {});
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  // Load saved records from SQLite
+  Future<void> _loadData() async {
+    List<Habit> habits = await databaseHelper.getHabits();
+    List<CheckIn> checkIns = await databaseHelper.getAllCheckIns();
+
+    if (!mounted) return;
+
+    setState(() {
+      _habits = habits;
+      _checkIns = checkIns;
+    });
+  }
+
+  // Refresh Garden and History together
+  void _refresh() {
+    _loadData();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
