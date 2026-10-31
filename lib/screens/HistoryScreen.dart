@@ -102,11 +102,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
         children: [
           DropdownButton<int>(
             isExpanded: true,
-            value: habit.id,
+            value: habit.id!,
             items: widget.habits
                 .map(
-                  (item) =>
-                      DropdownMenuItem(value: item.id, child: Text(item.title)),
+                  (item) => DropdownMenuItem(
+                    value: item.id!,
+                    child: Text(item.title),
+                  ),
                 )
                 .toList(),
             onChanged: (value) => setState(() => _selectedHabitId = value),
