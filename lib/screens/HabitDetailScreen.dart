@@ -41,6 +41,18 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
   String cycleStatus = 'Ready';
   late Habit _habit;
 
+  Future<void> _loadCycleStatus() async {
+    if (_habit.id == null) return;
+
+    String status = await databaseHelper.getCycleStatus(_habit.id!);
+
+    if (!mounted) return;
+
+    setState(() {
+      cycleStatus = status;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +64,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
       startDate: widget.startDate,
       motivation: widget.motivation,
     );
+    _loadCycleStatus();
   }
 
   Future<void> _editHabit() async {
