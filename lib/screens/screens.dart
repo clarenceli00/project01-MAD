@@ -275,7 +275,17 @@ Future<void> openCheckInForm(
   VoidCallback onChanged, {
   CheckIn? entry,
 }) async {
-  if (habit.startDate.isAfter(DateUtils.dateOnly(DateTime.now()))) return;
+  if (habit.id == null) return;
+
+  // Get dates already used by this habit
+  List<DateTime> usedDates = [];
+
+  for (CheckIn item in checkIns) {
+    if (item.habitId == habit.id && item.id != entry?.id) {
+      usedDates.add(item.date);
+    }
+  }
+
   final result = await showModalBottomSheet<Map<String, String>>(
     context: context,
     isScrollControlled: true,
@@ -283,22 +293,36 @@ Future<void> openCheckInForm(
     builder: (context) => CheckInForm(
       habitStartDate: habit.startDate,
       entry: entry,
-      usedDates: checkIns
-          .where((item) => item.habitId == habit.id && item != entry)
-          .map((item) => item.date)
-          .toList(),
+      usedDates: usedDates,
     ),
   );
+
   if (result == null || !context.mounted) return;
-  final updated = CheckIn(
-    habitId: habit.id,
+
+  // Create the CheckIn object
+  CheckIn updated = CheckIn(
+    id: entry?.id,
+    habitId: habit.id!,
     date: DateTime.parse(result['localDate']!),
     note: result['note']!,
   );
-  if (entry == null) {
-    checkIns.add(updated);
-  } else {
-    checkIns[checkIns.indexOf(entry)] = updated;
+
+  try {
+    if (entry == null) {
+      // Create new check-in
+      await databaseHelper.insertCheckIn(updated);
+    } else {
+      // Update existing check-in
+      await databaseHelper.updateCheckIn(updated);
+    }
+
+    // Reload data
+    onChanged();
+  } catch (error) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Could not save check-in: $error')));
   }
-  onChanged();
 }
