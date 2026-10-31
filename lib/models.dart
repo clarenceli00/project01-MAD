@@ -6,7 +6,7 @@ class Habit {
   final DateTime startDate;
   final String motivation;
 
-  // Saved weekly workflow information
+  // Weekly workflow data
   final DateTime? cycleWeekStart;
   final String cycleStatus;
 
@@ -21,7 +21,7 @@ class Habit {
     this.cycleStatus = 'Ready',
   });
 
-  // Convert a Habit object to a SQLite Map
+  // Convert a Habit into data for SQLite
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
@@ -37,7 +37,7 @@ class Habit {
     };
   }
 
-  // Convert a SQLite Map to a Habit object
+  // Convert SQLite data into a Habit
   factory Habit.fromMap(Map<String, dynamic> map) {
     return Habit(
       id: map['id'] as int,
@@ -67,7 +67,6 @@ class CheckIn {
     required this.note,
   });
 
-  // Convert a CheckIn object to a SQLite Map
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
@@ -77,7 +76,6 @@ class CheckIn {
     };
   }
 
-  // Convert a SQLite Map to a CheckIn object
   factory CheckIn.fromMap(Map<String, dynamic> map) {
     return CheckIn(
       id: map['id'] as int,
@@ -88,7 +86,7 @@ class CheckIn {
   }
 }
 
-// Convert DateTime to YYYY-MM-DD string
+// Save dates in YYYY-MM-DD format
 String dateToString(DateTime date) {
   String year = date.year.toString().padLeft(4, '0');
   String month = date.month.toString().padLeft(2, '0');
@@ -97,28 +95,25 @@ String dateToString(DateTime date) {
   return '$year-$month-$day';
 }
 
-// Get Monday of the selected week
+// Find Monday of the selected week
 DateTime weekStart(DateTime date) {
   DateTime day = DateTime(date.year, date.month, date.day);
 
-  return day.subtract(Duration(days: day.weekday - 1));
+  return DateTime(day.year, day.month, day.day - day.weekday + 1);
 }
 
-// Count unique check-in dates for a selected week
+// Count distinct check-in dates in a week
 int weeklyCount(List<CheckIn> entries, int habitId, DateTime week) {
-  DateTime monday = weekStart(week);
-  DateTime nextMonday = DateTime(monday.year, monday.month, monday.day + 7);
+  DateTime start = weekStart(week);
+
+  DateTime end = DateTime(start.year, start.month, start.day + 7);
 
   Set<String> dates = {};
 
   for (CheckIn entry in entries) {
-    if (entry.habitId != habitId) {
-      continue;
-    }
-
     DateTime day = DateTime(entry.date.year, entry.date.month, entry.date.day);
 
-    if (!day.isBefore(monday) && day.isBefore(nextMonday)) {
+    if (entry.habitId == habitId && !day.isBefore(start) && day.isBefore(end)) {
       dates.add(dateToString(day));
     }
   }
