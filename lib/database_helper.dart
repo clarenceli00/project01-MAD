@@ -190,4 +190,151 @@ class DatabaseHelper {
 
     return Sqflite.firstIntValue(rows) ?? 0;
   }
+
+  // Check if a selected check-in date is valid
+  void validateCheckIn(CheckIn entry, Habit habit) {
+    String selected = dateToString(entry.date);
+    String today = dateToString(DateTime.now());
+    String started = dateToString(habit.startDate);
+
+    if (selected.compareTo(today) > 0) {
+      throw ArgumentError('Future check-ins are not allowed.');
+    }
+
+    if (selected.compareTo(started) < 0) {
+      throw ArgumentError('Check-in date is before the habit start date.');
+    }
+  }
+
+  // CREATE check-in
+  Future<int> insertCheckIn(CheckIn entry) async {
+    return await _db.transaction((txn) async {
+      final habitRows = await txn.query(
+        habitTable,
+        where: 'id = ?',
+        whereArgs: [entry.habitId],
+        limit: 1,
+      );
+
+      if (habitRows.isEmpty) {
+        throw ArgumentError('Habit not found.');
+      }
+
+      Habit habit = Habit.fromMap(habitRows.first);
+      validateCheckIn(entry, habit);
+
+      final duplicate = await txn.query(
+        checkInTable,
+        where: 'habit_id = ? AND local_date = ?',
+        whereArgs: [entry.habitId, dateToString(entry.date)],
+        limit: 1,
+      );
+
+      if (duplicate.isNotEmpty) {
+        throw ArgumentError('A check-in already exists for this date.');
+      }
+
+      Map<String, dynamic> row = entry.toMap();
+      row.remove('id');
+
+      return await txn.insert(checkInTable, row);
+    });
+  }
+
+  // READ check-ins for one habit
+  Future<List<CheckIn>> getCheckIns(int habitId) async {
+    final rows = await _db.query(
+      checkInTable,
+      where: 'habit_id = ?',
+      whereArgs: [habitId],
+      orderBy: 'local_date DESC',
+    );
+
+    List<CheckIn> entries = [];
+
+    for (final row in rows) {
+      entries.add(CheckIn.fromMap(row));
+    }
+
+    return entries;
+  }
+
+  // READ all check-ins for all habits
+  Future<List<CheckIn>> getAllCheckIns() async {
+    final rows = await _db.query(checkInTable, orderBy: 'local_date DESC');
+
+    List<CheckIn> entries = [];
+
+    for (final row in rows) {
+      entries.add(CheckIn.fromMap(row));
+    }
+
+    return entries;
+  }
+
+  // UPDATE check-in
+  Future<int> updateCheckIn(CheckIn entry) async {
+    if (entry.id == null) {
+      throw ArgumentError('Check-in ID is required.');
+    }
+
+    return await _db.transaction((txn) async {
+      final oldRows = await txn.query(
+        checkInTable,
+        where: 'id = ?',
+        whereArgs: [entry.id],
+        limit: 1,
+      );
+
+      if (oldRows.isEmpty) {
+        return 0;
+      }
+
+      if (oldRows.first['habit_id'] != entry.habitId) {
+        throw ArgumentError('Cannot change the habit ID.');
+      }
+
+      final habitRows = await txn.query(
+        habitTable,
+        where: 'id = ?',
+        whereArgs: [entry.habitId],
+        limit: 1,
+      );
+
+      if (habitRows.isEmpty) {
+        throw ArgumentError('Habit not found.');
+      }
+
+      Habit habit = Habit.fromMap(habitRows.first);
+      validateCheckIn(entry, habit);
+
+      final duplicate = await txn.query(
+        checkInTable,
+        where: '''
+          habit_id = ? AND local_date = ? AND id != ?
+        ''',
+        whereArgs: [entry.habitId, dateToString(entry.date), entry.id],
+        limit: 1,
+      );
+
+      if (duplicate.isNotEmpty) {
+        throw ArgumentError('Another check-in already exists on this date.');
+      }
+
+      Map<String, dynamic> row = entry.toMap();
+      row.remove('id');
+
+      return await txn.update(
+        checkInTable,
+        row,
+        where: 'id = ?',
+        whereArgs: [entry.id],
+      );
+    });
+  }
+
+  // DELETE check-in
+  Future<int> deleteCheckIn(int id) async {
+    return await _db.delete(checkInTable, where: 'id = ?', whereArgs: [id]);
+  }
 }
