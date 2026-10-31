@@ -337,4 +337,72 @@ class DatabaseHelper {
   Future<int> deleteCheckIn(int id) async {
     return await _db.delete(checkInTable, where: 'id = ?', whereArgs: [id]);
   }
+
+  // Get current week's workflow status
+  Future<String> getCycleStatus(int habitId) async {
+    Habit? habit = await getHabit(habitId);
+
+    if (habit == null) {
+      throw ArgumentError('Habit not found.');
+    }
+
+    DateTime monday = weekStart(DateTime.now());
+
+    if (habit.cycleWeekStart == null) {
+      return 'Ready';
+    }
+
+    if (dateToString(habit.cycleWeekStart!) != dateToString(monday)) {
+      return 'Ready';
+    }
+
+    return habit.cycleStatus;
+  }
+
+  // Change workflow state
+  Future<void> changeCycleStatus(int habitId, String status) async {
+    if (status != 'Ready' && status != 'Active' && status != 'Finished') {
+      throw ArgumentError('Invalid status.');
+    }
+
+    String current = await getCycleStatus(habitId);
+
+    if (status == 'Active' && current != 'Ready') {
+      throw StateError('Only a Ready week can start.');
+    }
+
+    if (status == 'Finished' && current != 'Active') {
+      throw StateError('Start the week before finishing.');
+    }
+
+    DateTime monday = weekStart(DateTime.now());
+
+    int changed = await _db.update(
+      habitTable,
+      {'cycle_week_start': dateToString(monday), 'cycle_status': status},
+      where: 'id = ?',
+      whereArgs: [habitId],
+    );
+
+    if (changed == 0) {
+      throw ArgumentError('Habit not found.');
+    }
+  }
+
+  Future<void> startWeek(int habitId) async {
+    await changeCycleStatus(habitId, 'Active');
+  }
+
+  Future<void> finishWeek(int habitId) async {
+    await changeCycleStatus(habitId, 'Finished');
+  }
+
+  Future<void> resetWeek(int habitId) async {
+    await changeCycleStatus(habitId, 'Ready');
+  }
+
+  // Close database
+  Future<void> close() async {
+    await _db.close();
+  }
 }
