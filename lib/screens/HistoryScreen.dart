@@ -58,8 +58,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     );
     if (!mounted || confirmed != true) return;
-    widget.checkIns.remove(entry);
-    _refresh();
+    try {
+      await databaseHelper.deleteCheckIn(entry.id!);
+
+      _refresh();
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete check-in: $error')),
+      );
+    }
   }
 
   @override
