@@ -1,7 +1,3 @@
-//SQL database and CRUD functionality
-
-//data base getter, then open or create database
-//should be able to insert, retrieve, update and delete habits and checkins individually
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -17,7 +13,7 @@ class DatabaseHelper {
 
   late Database _db;
 
-  // Open or create database
+  // Open database
   Future<void> init() async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
 
@@ -28,7 +24,6 @@ class DatabaseHelper {
       version: _databaseVersion,
 
       onConfigure: (db) async {
-        // Enable foreign key relationships
         await db.execute('PRAGMA foreign_keys = ON');
       },
 
@@ -38,16 +33,13 @@ class DatabaseHelper {
     );
   }
 
-  // Create the database tables
+  // Create the tables when database is first opened
   Future<void> createTables(Database db) async {
-    // Habits table
     await db.execute('''
       CREATE TABLE habits (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL
-          CHECK(length(trim(title)) > 0),
-        category TEXT NOT NULL
-          CHECK(length(trim(category)) > 0),
+        title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+        category TEXT NOT NULL CHECK(length(trim(category)) > 0),
         weekly_target INTEGER NOT NULL
           CHECK(weekly_target BETWEEN 1 AND 7),
         started_local_date TEXT NOT NULL,
@@ -58,7 +50,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Check-ins table
     await db.execute('''
       CREATE TABLE check_ins (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,32 +65,9 @@ class DatabaseHelper {
       )
     ''');
 
-    // Index helps find check-ins by habit and date
     await db.execute('''
-      CREATE INDEX idx_checkins_habit_date
+      CREATE INDEX idx_checkins_habit
       ON check_ins(habit_id, local_date)
     ''');
-  }
-
-  // Check whether habit information is valid
-  void validateHabit(Habit habit) {
-    if (habit.title.trim().isEmpty) {
-      throw ArgumentError('Please enter a habit title.');
-    }
-
-    if (habit.category.trim().isEmpty) {
-      throw ArgumentError('Please select a category.');
-    }
-
-    if (habit.weeklyTarget < 1 || habit.weeklyTarget > 7) {
-      throw ArgumentError('Target must be between 1 and 7.');
-    }
-
-    String start = dateToString(habit.startDate);
-    String today = dateToString(DateTime.now());
-
-    if (start.compareTo(today) > 0) {
-      throw ArgumentError('Start date cannot be in the future.');
-    }
   }
 }
