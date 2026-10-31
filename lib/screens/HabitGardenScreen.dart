@@ -63,7 +63,7 @@ class _HabitGardenScreenState extends State<HabitGardenScreen> {
                   category: habit.category,
                   completedDays: weeklyCount(
                     widget.checkIns,
-                    habit.id,
+                    habit.id!,
                     DateTime.now(),
                   ),
                   weeklyTarget: habit.weeklyTarget,
