@@ -70,4 +70,124 @@ class DatabaseHelper {
       ON check_ins(habit_id, local_date)
     ''');
   }
+
+  // Check if habit information is valid
+  void validateHabit(Habit habit) {
+    if (habit.title.trim().isEmpty) {
+      throw ArgumentError('Habit name cannot be blank.');
+    }
+
+    if (habit.category.trim().isEmpty) {
+      throw ArgumentError('Category cannot be blank.');
+    }
+
+    if (habit.weeklyTarget < 1 || habit.weeklyTarget > 7) {
+      throw ArgumentError('Target must be between 1 and 7.');
+    }
+
+    if (dateToString(habit.startDate).compareTo(dateToString(DateTime.now())) >
+        0) {
+      throw ArgumentError('Future start dates are not allowed.');
+    }
+  }
+
+  // CREATE habit
+  Future<int> insertHabit(Habit habit) async {
+    validateHabit(habit);
+
+    Map<String, dynamic> row = habit.toMap();
+    row.remove('id');
+    row['cycle_week_start'] = null;
+    row['cycle_status'] = 'Ready';
+
+    return await _db.insert(habitTable, row);
+  }
+
+  // READ all habits
+  Future<List<Habit>> getHabits() async {
+    final rows = await _db.query(
+      habitTable,
+      orderBy: 'title COLLATE NOCASE ASC',
+    );
+
+    List<Habit> habits = [];
+
+    for (final row in rows) {
+      habits.add(Habit.fromMap(row));
+    }
+
+    return habits;
+  }
+
+  // READ one habit
+  Future<Habit?> getHabit(int id) async {
+    final rows = await _db.query(
+      habitTable,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    return Habit.fromMap(rows.first);
+  }
+
+  // UPDATE habit
+  Future<int> updateHabit(Habit habit) async {
+    if (habit.id == null) {
+      throw ArgumentError('Habit ID is required.');
+    }
+
+    validateHabit(habit);
+
+    return await _db.transaction((txn) async {
+      // Find earliest check-in date
+      final rows = await txn.query(
+        checkInTable,
+        columns: ['local_date'],
+        where: 'habit_id = ?',
+        whereArgs: [habit.id],
+        orderBy: 'local_date ASC',
+        limit: 1,
+      );
+
+      if (rows.isNotEmpty) {
+        String earliestDate = rows.first['local_date'] as String;
+
+        if (dateToString(habit.startDate).compareTo(earliestDate) > 0) {
+          throw ArgumentError('Correct or delete earlier check-ins first.');
+        }
+      }
+
+      Map<String, dynamic> row = habit.toMap();
+      row.remove('id');
+      row.remove('cycle_week_start');
+      row.remove('cycle_status');
+
+      return await txn.update(
+        habitTable,
+        row,
+        where: 'id = ?',
+        whereArgs: [habit.id],
+      );
+    });
+  }
+
+  // DELETE habit
+  Future<int> deleteHabit(int id) async {
+    return await _db.delete(habitTable, where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Count check-ins before deleting a habit
+  Future<int> countCheckIns(int habitId) async {
+    final rows = await _db.rawQuery(
+      'SELECT COUNT(*) FROM check_ins WHERE habit_id = ?',
+      [habitId],
+    );
+
+    return Sqflite.firstIntValue(rows) ?? 0;
+  }
 }
