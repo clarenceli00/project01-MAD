@@ -406,3 +406,5 @@ class DatabaseHelper {
     await _db.close();
   }
 }
+
+final databaseHelper = DatabaseHelper();
