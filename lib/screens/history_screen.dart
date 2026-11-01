@@ -216,14 +216,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 ),
                               );
 
-                              if (updated == null) return;
+                              // Make sure the widget still exists after navigation.
+                              if (!context.mounted || updated == null) return;
 
                               try {
                                 await databaseHelper.updateHabit(updated);
-                                if (!mounted) return;
+
+                                // Check again after saving to SQLite.
+                                if (!context.mounted) return;
+
                                 widget.onChanged();
                               } catch (error) {
-                                if (!mounted) return;
+                                // Check before using context to show the error.
+                                if (!context.mounted) return;
+
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
@@ -233,6 +239,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 );
                               }
                             },
+
                             child: const Text('Apply'),
                           ),
                         ],
