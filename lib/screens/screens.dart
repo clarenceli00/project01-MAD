@@ -1,38 +1,85 @@
 //This is where each of the 5 screens will live (Home, editor, details, settings, history)
 import 'package:flutter/material.dart';
-import 'package:project01/screens/HabitGardenScreen.dart';
-import 'package:project01/screens/HistoryScreen.dart';
-import 'package:project01/screens/SettingsScreen.dart';
+import 'package:project01/screens/habit_garden_screen.dart';
+import 'package:project01/screens/history_screen.dart';
+import 'package:project01/screens/settings_screen.dart';
+
 import '../models.dart';
+import '../database_helper.dart';
 
 class HabitGardenTabs extends StatefulWidget {
   const HabitGardenTabs({super.key});
   @override
   State<HabitGardenTabs> createState() => _HabitGardenTabsState();
 }
-class _HabitGardenTabsState extends State<HabitGardenTabs>{
+
+class _HabitGardenTabsState extends State<HabitGardenTabs> {
   var _selectedIndex = 0;
   // Shared in-memory records for Garden, Details, and History.
-  final List<Habit> _habits = [
-    Habit(title: 'Reading', category: 'Learning', weeklyTarget: 4,
-        startDate: DateUtils.dateOnly(DateTime.now()), motivation: 'Read more regularly'),
-    Habit(title: 'Sketching', category: 'Creative', weeklyTarget: 3,
-        startDate: DateUtils.dateOnly(DateTime.now()), motivation: ''),
-  ];
+  final List<Habit> _habits = [];
   final List<CheckIn> _checkIns = [];
+  bool _loading = true;
 
-  void _refresh() => setState(() {});
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final habits = await databaseHelper.getHabits();
+      final checkIns = await databaseHelper.getAllCheckIns();
+
+      if (!mounted) return;
+
+      setState(() {
+        // Keep the original List objects so screens that
+        // received them will see the latest records.
+        _habits.clear();
+        _habits.addAll(habits);
+
+        _checkIns.clear();
+        _checkIns.addAll(checkIns);
+
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+      });
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not load data: $error')));
+    }
+  }
+
+  void _refresh() {
+    _loadData();
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Habit Mastery League'),
-      ),
+      appBar: AppBar(title: const Text('Habit Mastery League')),
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          HabitGardenScreen(habits: _habits, checkIns: _checkIns, onChanged: _refresh),
-          HistoryScreen(habits: _habits, checkIns: _checkIns, onChanged: _refresh),
+          HabitGardenScreen(
+            habits: _habits,
+            checkIns: _checkIns,
+            onChanged: _refresh,
+          ),
+          HistoryScreen(
+            habits: _habits,
+            checkIns: _checkIns,
+            onChanged: _refresh,
+          ),
           const SettingsScreen(),
         ],
       ),
@@ -43,13 +90,19 @@ class _HabitGardenTabsState extends State<HabitGardenTabs>{
             _selectedIndex = index;
           });
         },
-        destinations: [NavigationDestination(icon: Icon(Icons.local_florist), label: "Garden"),
-        NavigationDestination(icon: Icon(Icons.history), label: "History"),
-        NavigationDestination(icon: Icon(Icons.settings), label: "Settings")],
+        destinations: [
+          NavigationDestination(
+            icon: Icon(Icons.local_florist),
+            label: "Garden",
+          ),
+          NavigationDestination(icon: Icon(Icons.history), label: "History"),
+          NavigationDestination(icon: Icon(Icons.settings), label: "Settings"),
+        ],
       ),
     );
   }
 }
+
 class HabitTile extends StatelessWidget {
   final String title;
   final String category;
@@ -90,12 +143,14 @@ class CheckInForm extends StatefulWidget {
   final DateTime habitStartDate;
   final CheckIn? entry;
   final List<DateTime> usedDates;
+  final int habitId;
 
   const CheckInForm({
     super.key,
     required this.habitStartDate,
     this.entry,
     this.usedDates = const [],
+    required this.habitId,
   });
 
   @override
@@ -103,9 +158,74 @@ class CheckInForm extends StatefulWidget {
 }
 
 class _CheckInFormState extends State<CheckInForm> {
+  bool _saving = false;
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   final TextEditingController _noteController = TextEditingController();
   String? _error;
+
+  Future<void> _saveCheckIn() async {
+    if (_saving) return;
+
+    // Check the selected date.
+    final today = DateUtils.dateOnly(DateTime.now());
+
+    if (_selectedDate.isAfter(today) ||
+        _selectedDate.isBefore(DateUtils.dateOnly(widget.habitStartDate))) {
+      setState(() {
+        _error = 'Choose a date between the habit start and today.';
+      });
+      return;
+    }
+
+    // Check for an already-used date.
+    for (DateTime date in widget.usedDates) {
+      if (DateUtils.isSameDay(date, _selectedDate)) {
+        setState(() {
+          _error = 'A check-in already exists for this date.';
+        });
+        return;
+      }
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    try {
+      final entry = widget.entry;
+
+      CheckIn updated = CheckIn(
+        id: entry?.id,
+        habitId: widget.habitId,
+        date: _selectedDate,
+        note: _noteController.text.trim(),
+      );
+
+      if (entry == null) {
+        await databaseHelper.insertCheckIn(updated);
+      } else {
+        await databaseHelper.updateCheckIn(updated);
+      }
+
+      if (!mounted) return;
+
+      // Close only after the database saves successfully.
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = error is ArgumentError
+            ? error.message.toString()
+            : 'Could not save check-in. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -182,8 +302,11 @@ class _CheckInFormState extends State<CheckInForm> {
 
             const SizedBox(height: 16),
 
-            if (_error != null) Text(_error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            if (_error != null)
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -194,23 +317,8 @@ class _CheckInFormState extends State<CheckInForm> {
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
-                  onPressed: () {
-                    final today = DateUtils.dateOnly(DateTime.now());
-                    if (_selectedDate.isAfter(today) ||
-                        _selectedDate.isBefore(DateUtils.dateOnly(widget.habitStartDate))) {
-                      setState(() => _error = 'Choose a date between the habit start and today.');
-                      return;
-                    }
-                    if (widget.usedDates.any((date) => DateUtils.isSameDay(date, _selectedDate))) {
-                      setState(() => _error = 'A check-in already exists for this date.');
-                      return;
-                    }
-                    Navigator.pop(context, <String, String>{
-                      'localDate': _dateText,
-                      'note': _noteController.text.trim(),
-                    });
-                  },
-                  child: const Text('Save Check-in'),
+                  onPressed: _saving ? null : _saveCheckIn,
+                  child: Text(_saving ? 'Saving...' : 'Save Check-in'),
                 ),
               ],
             ),
@@ -222,27 +330,40 @@ class _CheckInFormState extends State<CheckInForm> {
 }
 
 // Both Details and History use the same form and save to the shared list.
-Future<void> openCheckInForm(BuildContext context, Habit habit,
-    List<CheckIn> checkIns, VoidCallback onChanged, {CheckIn? entry}) async {
-  if (habit.startDate.isAfter(DateUtils.dateOnly(DateTime.now()))) return;
-  final result = await showModalBottomSheet<Map<String, String>>(
+
+Future<void> openCheckInForm(
+  BuildContext context,
+  Habit habit,
+  List<CheckIn> checkIns,
+  VoidCallback onChanged, {
+  CheckIn? entry,
+}) async {
+  if (habit.id == null) return;
+
+  // Find dates already used by this habit.
+  List<DateTime> usedDates = [];
+
+  for (CheckIn item in checkIns) {
+    if (item.habitId == habit.id && item.id != entry?.id) {
+      usedDates.add(item.date);
+    }
+  }
+
+  // Open the check-in form.
+  bool? saved = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     builder: (context) => CheckInForm(
+      habitId: habit.id!,
       habitStartDate: habit.startDate,
       entry: entry,
-      usedDates: checkIns.where((item) => item.habitId == habit.id && item != entry)
-          .map((item) => item.date).toList(),
+      usedDates: usedDates,
     ),
   );
-  if (result == null || !context.mounted) return;
-  final updated = CheckIn(habitId: habit.id,
-      date: DateTime.parse(result['localDate']!), note: result['note']!);
-  if (entry == null) {
-    checkIns.add(updated);
-  } else {
-    checkIns[checkIns.indexOf(entry)] = updated;
+
+  // Refresh only after SQLite saves successfully.
+  if (saved == true && context.mounted) {
+    onChanged();
   }
-  onChanged();
 }

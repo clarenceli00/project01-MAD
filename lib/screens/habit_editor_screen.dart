@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
+
 import '../models.dart';
 
 class HabitEditorScreen extends StatefulWidget {
   // Null creates a new habit, not null edits existing habit
   final Habit? habit;
   final DateTime? earliestCheckIn;
+  final int? suggestedTarget;
 
-  const HabitEditorScreen({super.key, this.habit, this.earliestCheckIn});
+  const HabitEditorScreen({
+    super.key,
+    this.habit,
+    this.earliestCheckIn,
+    this.suggestedTarget,
+  });
   @override
   State<HabitEditorScreen> createState() => _HabitEditorScreenState();
 }
+
 class _HabitEditorScreenState extends State<HabitEditorScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
@@ -29,6 +37,9 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
       _category = habit.category;
       _weeklyTarget = habit.weeklyTarget.toDouble();
       _startDate = habit.startDate;
+    }
+    if (widget.suggestedTarget != null) {
+      _weeklyTarget = widget.suggestedTarget!.toDouble();
     }
   }
 
@@ -55,7 +66,9 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (widget.earliestCheckIn != null &&
         _startDate.isAfter(widget.earliestCheckIn!)) {
-      setState(() => _dateError = 'Correct or delete earlier check-ins before changing the start date.');
+      setState(
+        () => _dateError = 'Correct or delete earlier check-ins before changing the start date.',
+      );
       return;
     }
 
@@ -66,6 +79,8 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
       weeklyTarget: _weeklyTarget.round(),
       startDate: DateUtils.dateOnly(_startDate),
       motivation: _motivationController.text.trim(),
+      cycleWeekStart: widget.habit?.cycleWeekStart,
+      cycleStatus: widget.habit?.cycleStatus ?? 'Ready',
     );
     Navigator.pop(context, habit);
   }
@@ -97,8 +112,13 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
               DropdownButtonFormField<String>(
                 initialValue: _category,
                 decoration: const InputDecoration(labelText: 'Category'),
-                items: ['Learning', 'Creative', 'Personal', 'Other'].map((category) {
-                  return DropdownMenuItem(value: category, child: Text(category));
+                items: ['Learning', 'Creative', 'Personal', 'Other'].map((
+                  category,
+                ) {
+                  return DropdownMenuItem(
+                    value: category,
+                    child: Text(category),
+                  );
                 }).toList(),
                 onChanged: (value) {
                   if (value != null) setState(() => _category = value);
@@ -108,25 +128,40 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
               OutlinedButton.icon(
                 onPressed: _pickStartDate,
                 icon: const Icon(Icons.calendar_today),
-                label: Text('Start date: ${MaterialLocalizations.of(context).formatMediumDate(_startDate)}'),
+                label: Text(
+                  'Start date: ${MaterialLocalizations.of(context).formatMediumDate(_startDate)}',
+                ),
               ),
-              if (_dateError != null) Text(_dateError!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              if (_dateError != null)
+                Text(
+                  _dateError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               const SizedBox(height: 16),
-              Text('Weekly target: ${_weeklyTarget.round()} ${_weeklyTarget == 1 ? 'day' : 'days'}'),
-              Slider(value: _weeklyTarget,min: 1,max: 7,divisions: 6,
+              Text(
+                'Weekly target: ${_weeklyTarget.round()} ${_weeklyTarget == 1 ? 'day' : 'days'}',
+              ),
+              Slider(
+                value: _weeklyTarget,
+                min: 1,
+                max: 7,
+                divisions: 6,
                 label: '${_weeklyTarget.round()} days',
                 onChanged: (value) => setState(() => _weeklyTarget = value),
               ),
               TextFormField(
                 controller: _motivationController,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Motivation (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Motivation (optional)',
+                ),
               ),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: [TextButton(onPressed: () => Navigator.pop(context),
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 8),
