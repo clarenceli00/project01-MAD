@@ -6,8 +6,14 @@ class HabitEditorScreen extends StatefulWidget {
   // Null creates a new habit, not null edits existing habit
   final Habit? habit;
   final DateTime? earliestCheckIn;
+  final int? suggestedTarget;
 
-  const HabitEditorScreen({super.key, this.habit, this.earliestCheckIn});
+  const HabitEditorScreen({
+    super.key,
+    this.habit,
+    this.earliestCheckIn,
+    this.suggestedTarget,
+  });
   @override
   State<HabitEditorScreen> createState() => _HabitEditorScreenState();
 }
@@ -31,6 +37,9 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
       _category = habit.category;
       _weeklyTarget = habit.weeklyTarget.toDouble();
       _startDate = habit.startDate;
+    }
+    if (widget.suggestedTarget != null) {
+      _weeklyTarget = widget.suggestedTarget!.toDouble();
     }
   }
 

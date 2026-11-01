@@ -38,11 +38,23 @@ class GardenGuide {
     }
 
     // Validate check-in history
+    // Keep only the selected habit's check-ins.
+    List<CheckIn> habitCheckIns = [];
+
     for (CheckIn entry in checkIns) {
-      if (entry.habitId != habit.id ||
-          dateToString(entry.date).compareTo(dateToString(habit.startDate)) <
-              0 ||
-          dateToString(entry.date).compareTo(dateToString(currentDate)) > 0) {
+      if (entry.habitId == habit.id) {
+        habitCheckIns.add(entry);
+      }
+    }
+
+    // Validate only this habit's check-ins.
+    for (CheckIn entry in habitCheckIns) {
+      String checkInDate = dateToString(entry.date);
+      String startDate = dateToString(habit.startDate);
+      String todayDate = dateToString(currentDate);
+
+      if (checkInDate.compareTo(startDate) < 0 ||
+          checkInDate.compareTo(todayDate) > 0) {
         return GardenGuideResult(
           suggestedTarget: null,
           message: 'Invalid check-in history.',
@@ -70,7 +82,7 @@ class GardenGuide {
         continue;
       }
 
-      int count = weeklyCount(checkIns, habit.id!, monday);
+      int count = weeklyCount(habitCheckIns, habit.id!, monday);
 
       weeks.add(monday);
       counts.add(count);

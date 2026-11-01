@@ -4,7 +4,8 @@ import '../models.dart';
 import 'screens.dart' show openCheckInForm;
 import '../database_helper.dart';
 
-//import '../garden_guide.dart';
+import '../garden_guide.dart';
+import 'habit_editor_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   final List<Habit> habits;
@@ -27,6 +28,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   int? _selectedHabitId;
   DateTime _week = weekStart(DateTime.now());
+  int? _dismissedHabitId;
 
   @override
   void initState() {
@@ -83,6 +85,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       (item) => item.id == selectedId,
       orElse: () => widget.habits.first,
     );
+    GardenGuideResult guide = GardenGuide.suggest(habit, widget.checkIns);
     final end = DateTime(_week.year, _week.month, _week.day + 7);
     final entries =
         widget.checkIns
@@ -153,6 +156,92 @@ class _HistoryScreenState extends State<HistoryScreen> {
             'Progress uses the current weekly target.',
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 8),
+          if (_dismissedHabitId != habit.id)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Garden Guide',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const Text('History-based local recommendation'),
+
+                    const SizedBox(height: 8),
+
+                    Text(guide.message),
+
+                    if (guide.suggestedTarget != null) ...[
+                      Text(
+                        'Suggested target: '
+                        '${guide.suggestedTarget} days/week',
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                        'Recent weekly counts: '
+                        '${guide.weeklyCounts.join(', ')}',
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _dismissedHabitId = habit.id;
+                              });
+                            },
+                            child: const Text('Keep my target'),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: () async {
+                              final updated = await Navigator.push<Habit>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => HabitEditorScreen(
+                                    habit: habit,
+                                    suggestedTarget: guide.suggestedTarget,
+                                  ),
+                                ),
+                              );
+
+                              if (updated == null) return;
+
+                              try {
+                                await databaseHelper.updateHabit(updated);
+                                if (!mounted) return;
+                                widget.onChanged();
+                              } catch (error) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Could not save target: $error',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Text('Apply'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
           Expanded(
             child: entries.isEmpty

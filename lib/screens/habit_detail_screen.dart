@@ -40,6 +40,7 @@ class HabitDetailScreen extends StatefulWidget {
 class _HabitDetailScreenState extends State<HabitDetailScreen> {
   String cycleStatus = 'Ready';
   late Habit _habit;
+  bool _changingCycle = false;
 
   Future<void> _loadCycleStatus() async {
     if (_habit.id == null) return;
@@ -54,7 +55,11 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
   }
 
   Future<void> _changeCycle(String action) async {
-    if (_habit.id == null) return;
+    if (_habit.id == null || _changingCycle) return;
+
+    setState(() {
+      _changingCycle = true;
+    });
 
     try {
       if (action == 'start') {
@@ -76,7 +81,40 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Could not update week: $error')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _changingCycle = false;
+        });
+      }
     }
+  }
+
+  Future<void> _confirmReset() async {
+    bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Weekly Flow?'),
+        content: const Text(
+          'This will change the weekly status to Ready. '
+          'Your saved check-ins and progress will not be deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmed != true) return;
+
+    await _changeCycle('reset');
   }
 
   @override
@@ -130,9 +168,31 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
     }
   }
 
+  Future<void> _reloadCheckIns() async {
+    try {
+      // Read the latest check-ins from SQLite.
+      List<CheckIn> updated = await databaseHelper.getAllCheckIns();
+
+      if (!mounted) return;
+
+      setState(() {
+        // Update the shared list with saved records.
+        widget.checkIns?.clear();
+        widget.checkIns?.addAll(updated);
+      });
+
+      // Ask the parent to refresh Garden and History.
+      widget.onCheckInsChanged?.call();
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not refresh: $error')));
+    }
+  }
+
   void _refreshCheckIns() {
-    widget.onCheckInsChanged?.call();
-    if (mounted) setState(() {});
+    _reloadCheckIns();
   }
 
   Future<void> _viewHistory() async {
@@ -257,20 +317,20 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
                 runSpacing: 8,
                 children: [
                   OutlinedButton(
-                    onPressed: cycleStatus == 'Ready'
+                    onPressed: !_changingCycle && cycleStatus == 'Ready'
                         ? () => _changeCycle('start')
                         : null,
                     child: const Text('Start Week'),
                   ),
                   OutlinedButton(
-                    onPressed: cycleStatus == 'Active'
+                    onPressed: !_changingCycle && cycleStatus == 'Active'
                         ? () => _changeCycle('finish')
                         : null,
                     child: const Text('Finish Week'),
                   ),
                   TextButton(
-                    onPressed: cycleStatus != 'Ready'
-                        ? () => _changeCycle('reset')
+                    onPressed: !_changingCycle && cycleStatus != 'Ready'
+                        ? _confirmReset
                         : null,
                     child: const Text('Reset Flow'),
                   ),

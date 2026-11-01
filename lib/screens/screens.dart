@@ -222,9 +222,7 @@ class _CheckInFormState extends State<CheckInForm> {
       });
     } finally {
       if (mounted) {
-        setState(() {
-          _saving = false;
-        });
+        setState(() => _saving = false);
       }
     }
   }
@@ -332,6 +330,7 @@ class _CheckInFormState extends State<CheckInForm> {
 }
 
 // Both Details and History use the same form and save to the shared list.
+
 Future<void> openCheckInForm(
   BuildContext context,
   Habit habit,
@@ -341,7 +340,7 @@ Future<void> openCheckInForm(
 }) async {
   if (habit.id == null) return;
 
-  // Get dates already used by this habit
+  // Find dates already used by this habit.
   List<DateTime> usedDates = [];
 
   for (CheckIn item in checkIns) {
@@ -350,44 +349,21 @@ Future<void> openCheckInForm(
     }
   }
 
-  final result = await showModalBottomSheet<Map<String, String>>(
+  // Open the check-in form.
+  bool? saved = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     builder: (context) => CheckInForm(
+      habitId: habit.id!,
       habitStartDate: habit.startDate,
       entry: entry,
       usedDates: usedDates,
-      habitId: habit.id!,
     ),
   );
 
-  if (result == null || !context.mounted) return;
-
-  // Create the CheckIn object
-  CheckIn updated = CheckIn(
-    id: entry?.id,
-    habitId: habit.id!,
-    date: DateTime.parse(result['localDate']!),
-    note: result['note']!,
-  );
-
-  try {
-    if (entry == null) {
-      // Create new check-in
-      await databaseHelper.insertCheckIn(updated);
-    } else {
-      // Update existing check-in
-      await databaseHelper.updateCheckIn(updated);
-    }
-
-    // Reload data
+  // Refresh only after SQLite saves successfully.
+  if (saved == true && context.mounted) {
     onChanged();
-  } catch (error) {
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Could not save check-in: $error')));
   }
 }
