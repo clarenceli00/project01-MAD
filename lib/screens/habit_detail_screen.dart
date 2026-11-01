@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models.dart';
-import 'HabitEditorScreen.dart';
-import 'HistoryScreen.dart';
+import 'habit_editor_screen.dart';
+import 'history_screen.dart';
 import 'screens.dart' show openCheckInForm;
 import '../database_helper.dart';
 

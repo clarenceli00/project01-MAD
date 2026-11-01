@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models.dart';
-import 'HabitDetailScreen.dart';
-import 'HabitEditorScreen.dart';
+import 'habit_detail_screen.dart';
+import 'habit_editor_screen.dart';
 import 'screens.dart' show HabitTile;
 import '../database_helper.dart';
 

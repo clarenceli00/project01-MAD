@@ -1,8 +1,8 @@
 //This is where each of the 5 screens will live (Home, editor, details, settings, history)
 import 'package:flutter/material.dart';
-import 'package:project01/screens/HabitGardenScreen.dart';
-import 'package:project01/screens/HistoryScreen.dart';
-import 'package:project01/screens/SettingsScreen.dart';
+import 'package:project01/screens/habit_garden_screen.dart';
+import 'package:project01/screens/history_screen.dart';
+import 'package:project01/screens/settings_screen.dart';
 
 import '../models.dart';
 import '../database_helper.dart';
