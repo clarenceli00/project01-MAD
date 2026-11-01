@@ -18,6 +18,7 @@ class _HabitGardenTabsState extends State<HabitGardenTabs> {
   // Shared in-memory records for Garden, Details, and History.
   List<Habit> _habits = [];
   List<CheckIn> _checkIns = [];
+  bool _loading = true;
 
   @override
   void initState() {
@@ -25,26 +26,45 @@ class _HabitGardenTabsState extends State<HabitGardenTabs> {
     _loadData();
   }
 
-  // Load saved records from SQLite
   Future<void> _loadData() async {
-    List<Habit> habits = await databaseHelper.getHabits();
-    List<CheckIn> checkIns = await databaseHelper.getAllCheckIns();
+    try {
+      final habits = await databaseHelper.getHabits();
+      final checkIns = await databaseHelper.getAllCheckIns();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _habits = habits;
-      _checkIns = checkIns;
-    });
+      setState(() {
+        // Keep the original List objects so screens that
+        // received them will see the latest records.
+        _habits.clear();
+        _habits.addAll(habits);
+
+        _checkIns.clear();
+        _checkIns.addAll(checkIns);
+
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+      });
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not load data: $error')));
+    }
   }
 
-  // Refresh Garden and History together
   void _refresh() {
     _loadData();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Habit Mastery League')),
       body: IndexedStack(
