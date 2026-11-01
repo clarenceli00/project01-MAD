@@ -319,33 +319,8 @@ class _CheckInFormState extends State<CheckInForm> {
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
-                  onPressed: () {
-                    final today = DateUtils.dateOnly(DateTime.now());
-                    if (_selectedDate.isAfter(today) ||
-                        _selectedDate.isBefore(
-                          DateUtils.dateOnly(widget.habitStartDate),
-                        )) {
-                      setState(
-                        () => _error =
-                            'Choose a date between the habit start and today.',
-                      );
-                      return;
-                    }
-                    if (widget.usedDates.any(
-                      (date) => DateUtils.isSameDay(date, _selectedDate),
-                    )) {
-                      setState(
-                        () =>
-                            _error = 'A check-in already exists for this date.',
-                      );
-                      return;
-                    }
-                    Navigator.pop(context, <String, String>{
-                      'localDate': _dateText,
-                      'note': _noteController.text.trim(),
-                    });
-                  },
-                  child: const Text('Save Check-in'),
+                  onPressed: _saving ? null : _saveCheckIn,
+                  child: Text(_saving ? 'Saving...' : 'Save Check-in'),
                 ),
               ],
             ),
