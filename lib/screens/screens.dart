@@ -143,12 +143,14 @@ class CheckInForm extends StatefulWidget {
   final DateTime habitStartDate;
   final CheckIn? entry;
   final List<DateTime> usedDates;
+  final int habitId;
 
   const CheckInForm({
     super.key,
     required this.habitStartDate,
     this.entry,
     this.usedDates = const [],
+    required this.habitId,
   });
 
   @override
@@ -156,9 +158,76 @@ class CheckInForm extends StatefulWidget {
 }
 
 class _CheckInFormState extends State<CheckInForm> {
+  bool _saving = false;
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   final TextEditingController _noteController = TextEditingController();
   String? _error;
+
+  Future<void> _saveCheckIn() async {
+    if (_saving) return;
+
+    // Check the selected date.
+    final today = DateUtils.dateOnly(DateTime.now());
+
+    if (_selectedDate.isAfter(today) ||
+        _selectedDate.isBefore(DateUtils.dateOnly(widget.habitStartDate))) {
+      setState(() {
+        _error = 'Choose a date between the habit start and today.';
+      });
+      return;
+    }
+
+    // Check for an already-used date.
+    for (DateTime date in widget.usedDates) {
+      if (DateUtils.isSameDay(date, _selectedDate)) {
+        setState(() {
+          _error = 'A check-in already exists for this date.';
+        });
+        return;
+      }
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    try {
+      final entry = widget.entry;
+
+      CheckIn updated = CheckIn(
+        id: entry?.id,
+        habitId: widget.habitId,
+        date: _selectedDate,
+        note: _noteController.text.trim(),
+      );
+
+      if (entry == null) {
+        await databaseHelper.insertCheckIn(updated);
+      } else {
+        await databaseHelper.updateCheckIn(updated);
+      }
+
+      if (!mounted) return;
+
+      // Close only after the database saves successfully.
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = error is ArgumentError
+            ? error.message.toString()
+            : 'Could not save check-in. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -314,6 +383,7 @@ Future<void> openCheckInForm(
       habitStartDate: habit.startDate,
       entry: entry,
       usedDates: usedDates,
+      habitId: habit.id!,
     ),
   );
 
