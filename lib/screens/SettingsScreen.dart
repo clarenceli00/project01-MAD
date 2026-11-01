@@ -9,6 +9,44 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final SettingsHelper settings = SettingsHelper();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    int target = await settings.getDefaultTarget();
+    bool reducedMotion = await settings.getReducedMotion();
+
+    if (!mounted) return;
+
+    setState(() {
+      targetValue = target.toDouble();
+      _reduceMotion = reducedMotion;
+    });
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      await settings.saveDefaultTarget(targetValue.round());
+      await settings.saveReducedMotion(_reduceMotion);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Settings saved!')));
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save settings: $error')),
+      );
+    }
+  }
+
   var targetValue = 1.0;
   bool _reduceMotion = false;
   @override
@@ -44,9 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
 
         FilledButton(
-          onPressed: () {
-            // Save your settings here.
-          },
+          onPressed: _saveSettings,
           child: const Text('Save Settings'),
         ),
       ],
