@@ -16,8 +16,8 @@ class HabitGardenTabs extends StatefulWidget {
 class _HabitGardenTabsState extends State<HabitGardenTabs> {
   var _selectedIndex = 0;
   // Shared in-memory records for Garden, Details, and History.
-  List<Habit> _habits = [];
-  List<CheckIn> _checkIns = [];
+  final List<Habit> _habits = [];
+  final List<CheckIn> _checkIns = [];
   bool _loading = true;
 
   @override
